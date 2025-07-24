@@ -4,16 +4,34 @@ from bs4 import BeautifulSoup
 from flask import Flask
 import threading
 
-# 🔑 Inseriamo direttamente qui i tuoi dati Telegram
+# 🔑 DATI TELEGRAM DIRETTI (non usiamo più variabili ambiente)
 TELEGRAM_TOKEN = "7531290365:AAGx-n2XkPOKwA_tBNvVEYTBxQJhnZ5l4sY"
 TELEGRAM_CHAT_ID = "495561018"
 
 # 🌍 URL da monitorare
 URL = "https://www.amazon.it/vine/vine-items?queue=potluck"
 
+# 🍪 COOKIE presi dal tuo browser con EditThisCookie
+cookies = {
+    "at-acbit": "Atza|IwEBIE9j4r49by1fmMZeYK4eybZUwaWL5lvVkOWzeWo1XKhWddPd7ebE3nUGN0sA0j6lY2xiDuPcKebu-laSa2c1zVmDpGqbqsrEHcLVqTzicv2Rkxh-ZcdRonEKOIj1gIjGcyK-cHDbQajMeN0SLJFPSlh9xL-EjaUi8gEbmvIK8vTtr3lJuN3OnUduQBKyEcsGxjtsqCLdJHkD4erAN9zcxn650IyEK75OQ_GpTdNf2XBnnw",
+    "i18n-prefs": "EUR",
+    "lc-acbit": "it_IT",
+    "sess-at-acbit": "Wt327DM8nl65mQ1I4WC9Gn8iHCV/S196CA/RPr0JaXc=",
+    "session-id": "260-8513997-2586068",
+    "session-id-time": "2082787201l",
+    "session-token": "XnxFA1qfkMsZ0atNQkBZRtL1H6XX+S+3nvv6sfcmcgMbPn2Y9H/lbxSXw1BEej7JwRJ0LWTpSqDV97oiLsgL6Pie0yKy12nhTUcw6KTUXApy2R9npFoTWuIkbKCCSEKzQGHRJqRCQz/D9DkQ3haYgs3IS9+4Ge6MJaCVukg11HxX818tKFDQ+gjjAbAI/2Gav45aG2m2PM2tkHvPAQTl+i87TBbGSyJLVtC2Vk3AEWXj0NOuTnmz/T1vUf/n3DTjh8b0EHZve9KCSFQH7WOkSa2Wzf4G1ytvULqf0Zri+BL2JXTOlvz3PkLMxwsq0hHi0RBPtQTs4UVaqyi167ytaxWbeD7uXu3Jqf5ir7fFDoNJJ1TDdpYfMS1cSnMnwcz3",
+    "sst-acbit": "Sst1|PQHurXazfrEOvAQvCT6rQz6xDFHGanFRIra0Opozqum_fV3vAiQRmDd_MUdFel8Nc8iCe2uWUbyAarQQ-VO1Kz29xUt_59__fd3uI11hDuKeZSvrXwhBVB3QpaAl3Fav-AK3nmAJBSoo9jOK-JJx15KI2KkVS5JzPCELlZnOp1DnACjGgfSfxH5v_g8lfhWV7CbeVKXIGaCqvf-WuRzCWwQSlr26moPU8W4SO3XjPN9twNldzA8_HTuSO9rxFm11FqX3p6wk_Swisc5FrYxPnobKeU2aJvH1niD7CyR6IAY3iK7Hdt6Bg4yTiytVJtURQQzTAhwEXOx-d3phE750OsbGmlsGGUEMSsnCYZRzRP8hvFo",
+    "ubid-acbit": "261-9368406-4193301",
+    "x-acbit": "\"?27?7hUpHrJ@ALNyh8zfcTZGJ0R7Jd6OFnIBaivss6TTtQkdqsGGOWkRW@EuDTAy\"",
+    "cwr_u": "080ec2f6-5f68-47aa-8812-323496c658ac",
+    "csm-hit": "tb:s-K9MD0P279K3MVRDTG8TX|1753368197387&t:1753368197497&adb:adblk_no",
+    "rxc": "AFwMp0kDfIisQR79vEs"
+}
+
+# Stato iniziale
 last_seen_items = set()
 
-# 🔧 Funzione per inviare messaggi su Telegram
+# 🔧 Funzione invio su Telegram
 def send_telegram_message(message: str):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -21,19 +39,17 @@ def send_telegram_message(message: str):
         resp = requests.post(url, data=data)
         print("Telegram response:", resp.text)
     except Exception as e:
-        print("Errore nell'invio del messaggio Telegram:", e)
+        print("Errore invio Telegram:", e)
 
-# 🔎 Funzione di monitoraggio
+# 🔎 Funzione monitoraggio
 def monitor_page():
     global last_seen_items
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-        }
-        response = requests.get(URL, headers=headers)
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(URL, headers=headers, cookies=cookies)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # 👇 ATTENZIONE: selettore degli articoli, puoi adattarlo se serve
+        # ATTENZIONE: puoi cambiare questo selettore se necessario
         items = set([el.text.strip() for el in soup.find_all("h2")])
 
         if not last_seen_items:
@@ -49,20 +65,19 @@ def monitor_page():
         else:
             print("🔄 Nessun nuovo articolo trovato.")
     except Exception as e:
-        print("❌ Errore nel monitoraggio:", e)
+        print("❌ Errore monitoraggio:", e)
 
-# 🖥️ Flask app
+# Flask app
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ MonitorVine attivo!"
+    return "✅ MonitorVine attivo con login!"
 
-# 🚀 Avvio monitoraggio in background
 def run_monitor():
     while True:
         monitor_page()
-        time.sleep(600)  # ogni 10 minuti
+        time.sleep(600)  # 10 minuti
 
 threading.Thread(target=run_monitor, daemon=True).start()
 
