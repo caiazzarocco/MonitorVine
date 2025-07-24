@@ -9,10 +9,10 @@ from flask import Flask
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-# 🌍 URL Amazon Vine
+# 🌍 URL di Amazon Vine
 URL = "https://www.amazon.it/vine/vine-items?queue=potluck"
 
-# 🍪 Cookie autenticazione
+# 🍪 Cookie per login Amazon Vine
 COOKIES = {
     "at-acbit": "Atza|IwEBIE9j4r49by1fmMZeYK4eybZUwaWL5lvVkOWzeWo1XKhWddPd7ebE3nUGN0sA0j6lY2xiDuPcKebu-laSa2c1zVmDpGqbqsrEHcLVqTzicv2Rkxh-ZcdRonEKOIj1gIjGcyK-cHDbQajMeN0SLJFPSlh9xL-EjaUi8gEbmvIK8vTtr3lJuN3OnUduQBKyEcsGxjtsqCLdJHkD4erAN9zcxn650IyEK75OQ_GpTdNf2XBnnw",
     "i18n-prefs": "EUR",
@@ -31,52 +31,57 @@ COOKIES = {
 
 last_seen_items = set()
 
+# 📩 Invia messaggi Telegram
 def send_telegram_message(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("⚠️ TOKEN o CHAT_ID mancanti.")
+        print("⚠️ Manca TELEGRAM_TOKEN o TELEGRAM_CHAT_ID.")
         return
     try:
-        requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            data={"chat_id": TELEGRAM_CHAT_ID, "text": message}
-        )
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+        requests.post(url, data=data)
     except Exception as e:
         print("❌ Errore Telegram:", e)
 
+# 🔎 Monitoraggio
 def monitor_page():
     global last_seen_items
     try:
-        r = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"}, cookies=COOKIES)
-        soup = BeautifulSoup(r.text, "html.parser")
-        items = set([el.text.strip() for el in soup.find_all("h2")])
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(URL, headers=headers, cookies=COOKIES)
+        soup = BeautifulSoup(response.text, "html.parser")
+        items = set(el.text.strip() for el in soup.find_all("h2"))
+
         if not last_seen_items:
             last_seen_items = items
-            print("✅ Stato iniziale salvato.")
+            print("✅ Stato iniziale salvato")
             return
+
         new_items = items - last_seen_items
         if new_items:
             for item in new_items:
-                send_telegram_message(f"🆕 Nuovo articolo Vine: {item}")
+                send_telegram_message(f"🆕 Nuovo prodotto trovato: {item}")
             last_seen_items = items
         else:
-            print("🔄 Nessun nuovo articolo trovato.")
+            print("🔄 Nessun nuovo prodotto.")
     except Exception as e:
         print("❌ Errore monitoraggio:", e)
 
+# 🌐 Flask per mantenere Render attivo
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ MonitorVine attivo!"
+    return "✅ MonitorVine attivo e funzionante!"
 
+# Thread di monitoraggio
 def run_monitor():
     while True:
         monitor_page()
-        time.sleep(60)  # ogni 1 minuto
+        time.sleep(60)  # controlla ogni minuto
 
-# avvio monitoraggio in thread
 threading.Thread(target=run_monitor, daemon=True).start()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
