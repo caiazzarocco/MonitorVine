@@ -77,7 +77,7 @@ def home():
 def run_monitor():
     while True:
         monitor_page()
-        time.sleep(600)  # 10 minuti
+time.sleep(60)  # ogni minuto
 
 threading.Thread(target=run_monitor, daemon=True).start()
 
