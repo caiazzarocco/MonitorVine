@@ -9,10 +9,10 @@ from flask import Flask
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-# 🌍 URL di Amazon Vine
+# 🌍 URL Amazon Vine
 URL = "https://www.amazon.it/vine/vine-items?queue=potluck"
 
-# 🍪 Cookie per login Amazon Vine
+# 🍪 Cookie Amazon Vine (presi da EditThisCookie)
 COOKIES = {
     "at-acbit": "Atza|IwEBIE9j4r49by1fmMZeYK4eybZUwaWL5lvVkOWzeWo1XKhWddPd7ebE3nUGN0sA0j6lY2xiDuPcKebu-laSa2c1zVmDpGqbqsrEHcLVqTzicv2Rkxh-ZcdRonEKOIj1gIjGcyK-cHDbQajMeN0SLJFPSlh9xL-EjaUi8gEbmvIK8vTtr3lJuN3OnUduQBKyEcsGxjtsqCLdJHkD4erAN9zcxn650IyEK75OQ_GpTdNf2XBnnw",
     "i18n-prefs": "EUR",
@@ -29,64 +29,73 @@ COOKIES = {
     "rxc": "AFwMp0lHQYisQR794Es"
 }
 
-# Salva l'ultimo stato per confrontare i cambiamenti
+# 🔧 Stato precedente
 last_seen_items = set()
 
-# 📩 Funzione per inviare messaggi su Telegram
-def send_telegram_message(message: str):
+# 📩 Funzione Telegram
+def send_telegram_message(msg: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("⚠️ TOKEN o CHAT_ID mancanti.")
+        print("⚠️ Manca TOKEN o CHAT_ID")
         return
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     try:
-        requests.post(url, data=data)
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            data={"chat_id": TELEGRAM_CHAT_ID, "text": msg}
+        )
     except Exception as e:
-        print("❌ Errore nell'invio del messaggio Telegram:", e)
+        print("Errore Telegram:", e)
 
-# 🔎 Funzione di monitoraggio
+# 🔎 Monitoraggio
 def monitor_page():
     global last_seen_items
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
-        response = requests.get(URL, headers=headers, cookies=COOKIES)
-        soup = BeautifulSoup(response.text, "html.parser")
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(URL, headers=headers, cookies=COOKIES)
+        soup = BeautifulSoup(r.text, "html.parser")
 
-        # Trova i prodotti
-        items = set([el.text.strip() for el in soup.find_all("h2")])
+        # 👇 Cambia selettore se serve
+        current_items = set([el.text.strip() for el in soup.find_all("h2") if el.text.strip()])
 
         if not last_seen_items:
-            last_seen_items = items
-            print("✅ Stato iniziale salvato, nessuna notifica inviata.")
+            last_seen_items.update(current_items)
+            print("✅ Stato iniziale salvato.")
             return
 
-        new_items = items - last_seen_items
-        if new_items:
-            for item in new_items:
-                send_telegram_message(f"🆕 Nuovo articolo Vine trovato: {item}")
-            last_seen_items = items
-        else:
-            print("🔄 Nessun nuovo articolo trovato.")
-    except Exception as e:
-        print("❌ Errore nel monitoraggio:", e)
+        # Nuovi prodotti
+        new_items = current_items - last_seen_items
+        for item in new_items:
+            send_telegram_message(f"🆕 Nuovo articolo Vine trovato: {item}")
 
-# 🌐 Flask app per Render
+        # Prodotti rimossi
+        removed_items = last_seen_items - current_items
+        for item in removed_items:
+            send_telegram_message(f"❌ Prodotto rimosso: {item}")
+
+        # Aggiorna stato
+        last_seen_items.clear()
+        last_seen_items.update(current_items)
+
+        if not new_items and not removed_items:
+            print("🔄 Nessuna modifica trovata.")
+
+    except Exception as e:
+        print("❌ Errore monitoraggio:", e)
+
+# 🌐 Flask
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ MonitorVine attivo!"
+    return "✅ MonitorVine attivo e funzionante!"
 
-# 🚀 Avvio monitoraggio in background
+# 🚀 Thread monitor
 def run_monitor():
     while True:
         monitor_page()
-        time.sleep(600)  # 600 secondi = 10 minuti
+        time.sleep(600)  # ogni 10 minuti
 
 threading.Thread(target=run_monitor, daemon=True).start()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
