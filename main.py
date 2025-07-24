@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask
 
-# 🔑 Variabili ambiente su Render (non toccare)
+# 🔑 Variabili ambiente su Render
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
@@ -20,13 +20,13 @@ COOKIES = {
     "sess-at-acbit": "Wt327DM8nl65mQ1I4WC9Gn8iHCV/S196CA/RPr0JaXc=",
     "session-id": "260-8513997-2586068",
     "session-id-time": "2082787201l",
-    "session-token": "XnxFA1qfkMsZ0atNQkBZRtL1H6XX+S+3nvv6sfcmcgMbPn2Y9H/lbxSXw1BEej7JwRJ0LWTpSqDV97oiLsgL6Pie0yKy12nhTUcw6KTUXApy2R9npFoTWuIkbKCCSEKzQGHRJqRCQz/D9DkQ3haYgs3IS9+4Ge6MJaCVukg11HxX818tKFDQ+gjjAbAI/2Gav45aG2m2PM2tkHvPAQTl+i87TBbGSyJLVtC2Vk3AEWXj0NOuTnmz/T1vUf/n3DTjh8b0EHZve9KCSFQH7WOkSa2Wzf4G1ytvULqf0Zri+BL2JXTOlvz3PkLMxwsq0hHi0RBPtQTs4UVaqyi167ytaxWbeD7uXu3Jqf5ir7fFDoNJJ1TDdpYfMS1cSnMnwcz3",
+    "session-token": "jIw7cm3PyNS6C9agbxDc3/VbldHm1AbQciY8De9hCCtudZaEVN+czV1GV4f+kN1/qYhipZR1xBXWHwBqNJXJukL4cSruqhMJ6i4NvvSQ8lc0U/sxxw1uPlMTadk5dBGOFr/bFtINX+nTJ46XEsCTakqZZUZECNgbjCPNfJsomZajKVnOSdqekNOQkq1YtUEo15YXjL3zSCHx21+f9VYQOToazfkPH8ZHdIVlOlQhhAyNJD9Yl+9PsWtlGWUK4rBITMqXXadhOPz1rBJ5dnAziBNSoK6L95XXn1M6DJ/gzEqXBn4zzNj0dclUmenJ6aElzUwur5O57WpZi+J44k/RX5CJT1DiSIsNtcBawmSiDN5u0KxT3MjlTE0X7wt+QUx2",
     "sst-acbit": "Sst1|PQHurXazfrEOvAQvCT6rQz6xDFHGanFRIra0Opozqum_fV3vAiQRmDd_MUdFel8Nc8iCe2uWUbyAarQQ-VO1Kz29xUt_59__fd3uI11hDuKeZSvrXwhBVB3QpaAl3Fav-AK3nmAJBSoo9jOK-JJx15KI2KkVS5JzPCELlZnOp1DnACjGgfSfxH5v_g8lfhWV7CbeVKXIGaCqvf-WuRzCWwQSlr26moPU8W4SO3XjPN9twNldzA8_HTuSO9rxFm11FqX3p6wk_Swisc5FrYxPnobKeU2aJvH1niD7CyR6IAY3iK7Hdt6Bg4yTiytVJtURQQzTAhwEXOx-d3phE750OsbGmlsGGUEMSsnCYZRzRP8hvFo",
     "ubid-acbit": "261-9368406-4193301",
-    "x-acbit": "\"?27?7hUpHrJ@ALNyh8zfcTZGJ0R7Jd6OFnIBaivss6TTtQkdqsGGOWkRW@EuDTAy\"",
+    "x-acbit": "\"gBnEr8ELznk0kI3j9AUFh4RdbHVB19dwmZSvgq6ZJ@K7I8gTjYcK9AItDo6zmKmQ\"",
     "cwr_u": "080ec2f6-5f68-47aa-8812-323496c658ac",
-    "csm-hit": "tb:s-K9MD0P279K3MVRDTG8TX|1753368197387&t:1753368197497&adb:adblk_no",
-    "rxc": "AFwMp0kDfIisQR79vEs"
+    "csm-hit": "tb:F2R7RY9KHW9QD6FJKM1J+s-35RF3HYXQ35V642NEJMM|1753381826102&t:1753381826102&adb:adblk_no",
+    "rxc": "AFwMp0lHQYisQR794Es"
 }
 
 # Salva l'ultimo stato per confrontare i cambiamenti
@@ -42,7 +42,7 @@ def send_telegram_message(message: str):
     try:
         requests.post(url, data=data)
     except Exception as e:
-        print("Errore nell'invio del messaggio Telegram:", e)
+        print("❌ Errore nell'invio del messaggio Telegram:", e)
 
 # 🔎 Funzione di monitoraggio
 def monitor_page():
@@ -54,7 +54,7 @@ def monitor_page():
         response = requests.get(URL, headers=headers, cookies=COOKIES)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Trova i prodotti (puoi cambiare il selettore se necessario)
+        # Trova i prodotti
         items = set([el.text.strip() for el in soup.find_all("h2")])
 
         if not last_seen_items:
@@ -72,7 +72,7 @@ def monitor_page():
     except Exception as e:
         print("❌ Errore nel monitoraggio:", e)
 
-# 🌐 Flask app per mantenere attivo su Render
+# 🌐 Flask app per Render
 app = Flask(__name__)
 
 @app.route('/')
