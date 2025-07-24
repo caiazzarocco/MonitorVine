@@ -1,18 +1,17 @@
 import os
 import time
-import threading
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask
 
-# 🔑 Variabili ambiente su Render
+# 🔑 Variabili ambiente su Render (non toccare)
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-# 🌍 URL Amazon Vine
+# 🌍 URL di Amazon Vine
 URL = "https://www.amazon.it/vine/vine-items?queue=potluck"
 
-# 🍪 Cookie Amazon Vine (presi da EditThisCookie)
+# 🍪 Cookie per login Amazon Vine
 COOKIES = {
     "at-acbit": "Atza|IwEBIE9j4r49by1fmMZeYK4eybZUwaWL5lvVkOWzeWo1XKhWddPd7ebE3nUGN0sA0j6lY2xiDuPcKebu-laSa2c1zVmDpGqbqsrEHcLVqTzicv2Rkxh-ZcdRonEKOIj1gIjGcyK-cHDbQajMeN0SLJFPSlh9xL-EjaUi8gEbmvIK8vTtr3lJuN3OnUduQBKyEcsGxjtsqCLdJHkD4erAN9zcxn650IyEK75OQ_GpTdNf2XBnnw",
     "i18n-prefs": "EUR",
@@ -29,73 +28,53 @@ COOKIES = {
     "rxc": "AFwMp0lHQYisQR794Es"
 }
 
-# 🔧 Stato precedente
 last_seen_items = set()
 
-# 📩 Funzione Telegram
-def send_telegram_message(msg: str):
+# 📩 Funzione per inviare messaggi su Telegram
+def send_telegram_message(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("⚠️ Manca TOKEN o CHAT_ID")
+        print("⚠️ TOKEN o CHAT_ID mancanti.")
         return
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     try:
-        requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            data={"chat_id": TELEGRAM_CHAT_ID, "text": msg}
-        )
+        requests.post(url, data=data)
     except Exception as e:
-        print("Errore Telegram:", e)
+        print("Errore nell'invio del messaggio Telegram:", e)
 
-# 🔎 Monitoraggio
+# 🔎 Funzione di monitoraggio
 def monitor_page():
     global last_seen_items
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(URL, headers=headers, cookies=COOKIES)
-        soup = BeautifulSoup(r.text, "html.parser")
-
-        # 👇 Cambia selettore se serve
-        current_items = set([el.text.strip() for el in soup.find_all("h2") if el.text.strip()])
+        response = requests.get(URL, headers=headers, cookies=COOKIES)
+        soup = BeautifulSoup(response.text, "html.parser")
+        items = set([el.text.strip() for el in soup.find_all("h2")])
 
         if not last_seen_items:
-            last_seen_items.update(current_items)
-            print("✅ Stato iniziale salvato.")
+            last_seen_items = items
+            print("✅ Stato iniziale salvato, nessuna notifica inviata.")
             return
 
-        # Nuovi prodotti
-        new_items = current_items - last_seen_items
-        for item in new_items:
-            send_telegram_message(f"🆕 Nuovo articolo Vine trovato: {item}")
-
-        # Prodotti rimossi
-        removed_items = last_seen_items - current_items
-        for item in removed_items:
-            send_telegram_message(f"❌ Prodotto rimosso: {item}")
-
-        # Aggiorna stato
-        last_seen_items.clear()
-        last_seen_items.update(current_items)
-
-        if not new_items and not removed_items:
-            print("🔄 Nessuna modifica trovata.")
-
+        new_items = items - last_seen_items
+        if new_items:
+            for item in new_items:
+                send_telegram_message(f"🆕 Nuovo articolo Vine trovato: {item}")
+            last_seen_items = items
+        else:
+            print("🔄 Nessun nuovo articolo trovato.")
     except Exception as e:
-        print("❌ Errore monitoraggio:", e)
+        print("❌ Errore nel monitoraggio:", e)
 
-# 🌐 Flask
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ MonitorVine attivo e funzionante!"
+    return "✅ MonitorVine attivo!"
 
-# 🚀 Thread monitor
-def run_monitor():
+# 🚀 Avvio monitoraggio sequenziale (senza thread)
+if __name__ == '__main__':
+    # Avvio monitoraggio in modo bloccante (esecuzione sequenziale)
     while True:
         monitor_page()
-        time.sleep(600)  # ogni 10 minuti
-
-threading.Thread(target=run_monitor, daemon=True).start()
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+        time.sleep(60)  # Controllo ogni 60 secondi
