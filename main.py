@@ -71,6 +71,8 @@ def run_monitor():
 
 threading.Thread(target=run_monitor, daemon=True).start()
 
+send_telegram_message("✅ Test dal server Render!")
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
