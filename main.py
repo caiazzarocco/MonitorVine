@@ -9,7 +9,7 @@ TELEGRAM_TOKEN = "7531290365:AAGx-n2XkPOKwA_tBNvVEYTBxQJhnZ5l4sY"
 TELEGRAM_CHAT_ID = "495561018"
 
 # 🌍 URL da monitorare
-URL = "https://www.amazon.it/vine/vine-items?queue=potluck"
+URL = "https://time.is/"
 
 # 🍪 COOKIE presi dal tuo browser con EditThisCookie
 cookies = {
@@ -50,7 +50,7 @@ def monitor_page():
         soup = BeautifulSoup(response.text, "html.parser")
 
         # ATTENZIONE: puoi cambiare questo selettore se necessario
-        items = set([el.text.strip() for el in soup.find_all("h2")])
+items = set([el.text.strip() for el in soup.find_all("div")])
 
         if not last_seen_items:
             last_seen_items = items
